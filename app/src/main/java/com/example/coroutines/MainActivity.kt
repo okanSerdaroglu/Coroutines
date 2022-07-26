@@ -9,11 +9,13 @@ import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 
 class MainActivity : ComponentActivity() {
 
 
+    private val JOB_TIMEOUT = 3900L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,13 +47,24 @@ class MainActivity : ComponentActivity() {
          * we can assign a coroutine scope as a job
          */
         withContext(IO) {
-            val job = launch {
-                val result1 = getResult1FromAPI()
+            val job = withTimeoutOrNull(JOB_TIMEOUT) {
+                val result1 = getResult1FromAPI() // wait
                 setTextOnMainThread(result1)
 
-                val result2 = getResult2FromAPI()
+                val result2 = getResult2FromAPI() // wait
                 setTextOnMainThread(result2)
             }
+
+            if (job == null) {
+                val cancelMessage = "Cancelling job... Job takes longer than $JOB_TIMEOUT ms"
+                println("debug : $cancelMessage")
+                setTextOnMainThread(cancelMessage)
+            }
+
+            /**
+             * total time for this job is 4000 ms. However our timeout for this
+             * job is 3900 ms. That's why withTimeoutOrNull function returns null here
+             */
         }
     }
 
