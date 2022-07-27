@@ -4,8 +4,10 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -24,38 +26,30 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * in this case both jobs work at the same time.
-     * if you use job1.join() this means that we want to wait
-     * for ending job1 then job2 starts. You can check the times
-     * from the logs
+     * async and await pattern
+     * it is totally same with job pattern. There is only one difference. With this pattern
+     * you can access the result. In job pattern it is available it the job like that
+     * val job = launch {
+     *    val result = getResult1FromAPI() -> result is available only in job. But in async pattern you can get it outside the job
+     * }
      */
     private fun fakeApiRequest() {
 
-        val startTime = System.currentTimeMillis()
+        CoroutineScope(IO).launch {
 
-        val parentJob = CoroutineScope(IO).launch {
-            val job1 = launch {
-                val time1 = measureTimeMillis {
-                    println("debug: launching job1 in thread: ${Thread.currentThread().name} ")
-                    val result1 = getResult1FromAPI()
-                    setTextOnMainThread(result1)
+            val executionTime = measureTimeMillis {
+                val result1: Deferred<String> = async {
+                    println("debug: launching job1:${Thread.currentThread().name}")
+                    getResult1FromAPI()
                 }
-                println("debug: completed job1 in $time1 ms.")
-            }
-            val job2 = launch {
-                val time2 = measureTimeMillis {
-                    println("debug: launching job2 in thread: ${Thread.currentThread().name} ")
-                    val result2 = getResult2FromAPI()
-                    setTextOnMainThread(result2)
+
+                val result2: Deferred<String> = async {
+                    println("debug: launching job2:${Thread.currentThread().name}")
+                    getResult2FromAPI()
                 }
-                println("debug: completed job1 in $time2 ms.")
             }
+            println("debug:total time elapsed:${executionTime}")
         }
-        parentJob.invokeOnCompletion {
-            println("debug: total elapsed time : ${System.currentTimeMillis() - startTime}")
-        }
-
-
     }
 
     private fun setNewText(input: String) {
