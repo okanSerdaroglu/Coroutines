@@ -3,80 +3,72 @@ package com.example.coroutines
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlin.system.measureTimeMillis
+import kotlinx.coroutines.runBlocking
+import kotlin.random.Random
 
 
 class MainActivity : AppCompatActivity() {
 
     /**
-     * There are 2 jobs here and second one waits the first one's result.
-     * It is async and await pattern
+     * runBlocking is just a coroutine scope. It is the with coroutine scope but only one difference
+     * a coroutine scope works in an isolated area in the selected thread. This means that it only works in it's area
+     * and does not block entire thread. However if you use runBlocking you block entire thread until the job complete
+     * in the runBlocking scope. That is the difference
+     * -----
+     * a common use case of runBlocking is testing with jUnit. we use it in testing because we want to be make
+     * sure nothing happens in the current thread with related coroutine scope
      */
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         button.setOnClickListener {
-            setNewText("Clicked")
-            fakeApiRequest()
+            main()
         }
     }
 
+    private fun main() {
 
-    private fun fakeApiRequest() {
-        CoroutineScope(IO).launch {
-            val executionTime = measureTimeMillis {
-                val result1 = async {
-                    println("debug: launching job1: ${Thread.currentThread().name}")
-                    getResult1FromAPI()
-                }.await()
+        // # job1
+        CoroutineScope(Main).launch {
+            println("debug: Starting job in thread: ${Thread.currentThread().name}")
 
-                println("Debug: got result2: $result1")
-                setTextOnMainThread(result1)
+            val result1 = getResult()
+            println("debug: result1:$result1")
 
-                val result2 = async {
-                    println("debug: launching job2: ${Thread.currentThread().name}")
-                    getResult2FromAPI(result1)
-                }.await()
+            val result2 = getResult()
+            println("debug: result1:$result2")
 
-                println("Debug: got result2: $result2")
-                setTextOnMainThread(result2)
+            val result3 = getResult()
+            println("debug: result1:$result3")
+
+            val result4 = getResult()
+            println("debug: result1:$result4")
+
+            val result5 = getResult()
+            println("debug: result1:$result5")
+        }
+
+        // # job 2
+        CoroutineScope(Main).launch {
+            delay(1000)
+            runBlocking {
+                println("debug: blocking thread ${Thread.currentThread().name}")
+                delay(4000)
+                println("debug: done blocking thread ${Thread.currentThread().name}")
             }
-
-            println("Debug: total elapsed time: $executionTime ms")
         }
     }
 
-    private fun setNewText(input: String) {
-        val newText = text.text.toString() + "\n" + input
-        text.text = newText
-    }
-
-    private suspend fun setTextOnMainThread(input: String) {
-        withContext(Main) {
-            setNewText(input)
-        }
-    }
-
-    private suspend fun getResult1FromAPI(): String {
+    private suspend fun getResult(): Int {
         delay(1000)
-        return "RESULT #1"
+        return Random.nextInt(0, 100)
     }
 
-    private suspend fun getResult2FromAPI(result1: String): String {
-        delay(1700)
-        if (result1 == "RESULT #1") {
-            return "RESULT #2"
-        }
-        throw CancellationException("Result1 was incorrect...")
-    }
+
 
 }
